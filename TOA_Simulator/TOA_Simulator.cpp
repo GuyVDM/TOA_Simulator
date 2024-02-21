@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <ctime>   
 #include <numeric>
+#include <limits>
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"
@@ -89,7 +90,7 @@ struct TOA_Settings
 	bool     bWalkThePath    = false;
 
 	//-----SIMULATION PARAMETERS-----//
-	int32_t  simStepSize   = 1;
+	int32_t  simStepSize = 1;
 	int32_t  simStepTime = 1;
 };
 
@@ -226,8 +227,7 @@ static int32_t CalculateRaidPoints(const TOA_Settings& _settings)
 	for(const auto& entity : Raid_Entities) 
 	{
 		float points = entity.baseHitpoints;
-
-		points += entity.bAffectedByInvoc ? (entity.baseHitpoints * invocMultiplier) : 0;
+		points += entity.bAffectedByInvoc ? entity.baseHitpoints * invocMultiplier : 0;
 
 		// Apply multipliers
 		{
@@ -259,7 +259,7 @@ static int32_t CalculateRaidPoints(const TOA_Settings& _settings)
 int main()
 {
 	TOA_Settings settings;
-	settings.invocLvl = 375;
+	settings.invocLvl = 400;
 	settings.wardenDownCountP2 = 3;
 	settings.bDoSkullSkip = true;
 	settings.bWalkThePath = true;
@@ -353,7 +353,7 @@ int main()
 		NEWLINE();
 #pragma endregion
 
- #pragma region RAID_UNIQUES_SIM
+#pragma region RAID_UNIQUES_OBTAINED
 		PRINT(YELLOW << "--------- UNIQUES GAINED --------");
 
 		for(const auto& unique : analytics.uniques) 
@@ -375,19 +375,32 @@ int main()
 					dropRate *= dropratePenalty;
 			}
 
-			// Print the rarity, our personal rate, and the amount of the unqiques we have obtained.
-			{
-				int32_t simDropRate = (analytics.uniques[uniqueType] != 0 ? (analytics.kc / analytics.uniques[uniqueType]) : dropRate);
+			//TODO: Track of each item which kc we got it from, add all the kcs together and divise it be the number of uniques we have gathered.
 
-				if (uniqueType == mostRecentUnique)
-				{
-					PRINT(RED << "(1/" << dropRate << ")" << RESET << " vs " << GREEN << "(1/" << simDropRate << ") " << YELLOW << dropTable[unique.first].name << ": " << GREEN << unique.second << "x");
-				}
-				else
-				{
-					PRINT(RED << "(1/" << dropRate << ")" << RESET << " vs " << GREEN << "(1/" << simDropRate << ") " << RESET << dropTable[unique.first].name << ": " << GREEN << unique.second << "x");
-				}
+			// Print the rarity, our personal rate, and the amount of the uniques we have obtained.
+			{
+				const int32_t simDropRate = (analytics.uniques[uniqueType] != 0 ? (int32_t)roundf(analytics.kc / analytics.uniques[uniqueType]) : dropRate);
+				const auto color = uniqueType == mostRecentUnique ? YELLOW : RESET;
+
+				PRINT(RED << "(1/" << dropRate << ")" << RESET << " vs " << GREEN << "(1/" << simDropRate << ") " << color << dropTable[unique.first].name << ": " << GREEN << unique.second << "x");			
 			}
+		}
+
+		NEWLINE();
+
+		// Print our unique total count and compare our average with the calculated rarity.
+		{
+			const int32_t oneIn = (int32_t)floorf(ceilf(100.0f / uniqueRate));
+			const int32_t count = std::accumulate(analytics.uniques.begin(), analytics.uniques.end(), 0, [](int _i, const auto& item)
+				{
+					return _i += item.second;
+				});
+
+			const int32_t ourOdds = analytics.kc != 0 && count != 0 ? analytics.kc / count : oneIn;
+			const int32_t expectedCount = analytics.kc != 0 ? (int32_t)floorf((float)analytics.kc / ceilf(100.0f / uniqueRate)) : 0;
+			const auto color = expectedCount > count ? RED : expectedCount < count ? GREEN : YELLOW;
+
+			PRINT("You have obtained a total of: " << color << count << RESET << " uniques." << " [Expected: " << color << expectedCount << RESET << "]" << color << " (1/" << ourOdds <<").");
 		}
 #pragma endregion
 
