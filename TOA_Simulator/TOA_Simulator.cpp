@@ -238,8 +238,7 @@ static int32_t CalculateRaidPoints(const TOA_Settings& _settings)
 		// Apply Walk the Path Invocation
 		if(_settings.bWalkThePath && entity.bAffectedByInvoc)
 		{
-			const float wtp_bonus = floorf(entity.baseHitpoints * 1.08f) - entity.baseHitpoints;
-			TotalRaidPoints += wtp_bonus;
+			TotalRaidPoints += floorf(entity.baseHitpoints * 1.08f) - entity.baseHitpoints;
 		}
 
 		TotalRaidPoints += floorf(points);
@@ -248,8 +247,7 @@ static int32_t CalculateRaidPoints(const TOA_Settings& _settings)
 	// remove 5% total as that's the estimate of the skull skip if not enabled.
 	if(!_settings.bDoSkullSkip) 
 	{
-		const float skullskipPenalty = (TotalRaidPoints * 0.05f);
-		TotalRaidPoints -= skullskipPenalty;
+		TotalRaidPoints *= 0.95f;
 	}
 
 
@@ -263,8 +261,8 @@ int main()
 	settings.wardenDownCountP2 = 3;
 	settings.bDoSkullSkip = true;
 	settings.bWalkThePath = true;
-	settings.simStepSize = 1;
-	settings.simStepTime = 1;
+	settings.simStepSize = 18;
+	settings.simStepTime = 5;
 
 	TOA_Analytics analytics;
 	analytics.bShowUniqueData = true;
